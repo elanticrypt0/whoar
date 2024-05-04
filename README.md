@@ -6,6 +6,12 @@ Programa para recuperar toda la información de un dominio.com.ar
 
 Si tenés golang instado en tu pc entonces sólo necesitas tener instalada la dependencia: whois
 
+## Instalación con golang
+
+```go
+go install github.com/k23dev/whoar@latest
+```
+
 # Uso
 
 
