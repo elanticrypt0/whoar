@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ type WhoAr struct {
 	outputPath     string
 	output         []byte
 	isActiveDomain bool
+	domainFile     string
 }
 
 func NewWhoAr() *WhoAr {
@@ -30,11 +32,18 @@ func (whoar *WhoAr) SetOutputPath(path string) {
 
 func (whoar *WhoAr) Run() {
 	if whoar.IsArDomain(whoar.domain) {
-		whoar.whois()
-		if whoar.isActiveDomain {
-			whoar.saveFile()
+		whoar.makeDomainFile()
+
+		// si el archivo no existe entonces ejecuta todo lo demás.
+		if whoar.domainFileNoExists() {
+			whoar.whois()
+			if whoar.isActiveDomain {
+				whoar.saveFile()
+			} else {
+				log.Println("El dominio: ", whoar.domain, " No se encuentra activo")
+			}
 		} else {
-			log.Println("El dominio: ", whoar.domain, " No se encuentra activo")
+			log.Panicln("Dominio: ", whoar.domain, " ya fue escaneado.")
 		}
 	} else {
 		log.Println("El dominio: ", whoar.domain, " no termina en .AR")
@@ -58,21 +67,24 @@ func (whoar *WhoAr) whois() {
 		log.Println("Error al ejecutar el script:", err)
 		os.Exit(1)
 	}
-	// Comparar la cadena
-	if string(output) != "El dominio no se encuentra registrado en NIC Argentina\n" {
-		whoar.isActiveDomain = true
-		whoar.output = output
+
+	msgExceededQueries := "Excediste la cantidad permitida de consultas. Volvé a intentarlo más tarde\n"
+
+	if string(output) != msgExceededQueries {
+		// Comparar la cadena
+		if string(output) != "El dominio no se encuentra registrado en NIC Argentina\n" {
+			whoar.isActiveDomain = true
+			whoar.output = output
+		}
+	} else {
+		fmt.Println("")
+		fmt.Println(msgExceededQueries)
+		log.Panicln("")
 	}
 }
 
 func (whoar *WhoAr) saveFile() {
-	// Guardar la salida en un archivo con el nombre del dominio + .txt
-	dominioFile := strings.ReplaceAll(whoar.domain, ".", "_")
-	nombreArchivo := dominioFile + ".txt"
-	if whoar.outputPath != "" {
-		nombreArchivo = whoar.outputPath + "/" + nombreArchivo
-	}
-	archivo, err := os.Create(nombreArchivo)
+	archivo, err := os.Create(whoar.domainFile)
 	if err != nil {
 		log.Println("Error al crear el archivo:", err)
 		os.Exit(1)
@@ -85,5 +97,23 @@ func (whoar *WhoAr) saveFile() {
 		os.Exit(1)
 	}
 
-	log.Println("Salida del script guardada en", nombreArchivo)
+	log.Println("Salida del script guardada en", whoar.domainFile)
+}
+
+func (whoar *WhoAr) makeDomainFile() {
+	// Guardar la salida en un archivo con el nombre del dominio + .txt
+	dominioFile := strings.ReplaceAll(whoar.domain, ".", "_")
+	nombreArchivo := dominioFile + ".txt"
+	if whoar.outputPath != "" {
+		nombreArchivo = whoar.outputPath + "/" + nombreArchivo
+	}
+	whoar.domainFile = nombreArchivo
+}
+
+func (whoar *WhoAr) domainFileNoExists() bool {
+	if _, err := os.Stat(whoar.domainFile); os.IsNotExist(err) {
+		return true
+	} else {
+		return false
+	}
 }
