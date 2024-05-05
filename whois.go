@@ -43,7 +43,7 @@ func (whoar *WhoAr) Run() {
 				log.Println("El dominio: ", whoar.domain, " No se encuentra activo")
 			}
 		} else {
-			log.Panicln("Dominio: ", whoar.domain, " ya fue escaneado.")
+			log.Println("Dominio: ", whoar.domain, " ya fue escaneado.")
 		}
 	} else {
 		log.Println("El dominio: ", whoar.domain, " no termina en .AR")
